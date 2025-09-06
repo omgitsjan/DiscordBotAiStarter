@@ -23,8 +23,8 @@
     }
   ],
   "npm": {
-    "fileMatch": ["^package\\.json$"]
+    "managerFilePatterns": ["/^package\\.json$/"]
   },
   "schedule": ["before 11am on the first day of the month"],
-  "baseBranches": ["master"]
+  "baseBranchPatterns": ["master"]
 }

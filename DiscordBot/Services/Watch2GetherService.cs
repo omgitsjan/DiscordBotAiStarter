@@ -3,56 +3,58 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace DiscordBot.Services
 {
+    /// <summary>
+    /// Service for interacting with the Watch2Gether API to create shared video rooms.
+    /// </summary>
     public class Watch2GetherService(IHttpService httpService, IConfiguration configuration) : IWatch2GetherService
     {
         /// <summary>
-        ///     Api Key to access Watch2Gether Api
+        /// API key for Watch2Gether (set via configuration).
         /// </summary>
         private string? _w2GApiKey;
 
         /// <summary>
-        ///     Url to the CreateRoom Api
+        /// API endpoint for room creation.
         /// </summary>
         private string? _w2GCreateRoomUrl;
 
         /// <summary>
-        ///     Url to the Room URL
+        /// Base URL used to present a created room to the user.
         /// </summary>
         private string? _w2GShowRoomUrl;
 
         /// <summary>
-        ///     Creates a Watch2Gether room for sharing a video.
+        /// Creates a Watch2Gether room for sharing a video.
         /// </summary>
         /// <param name="videoUrl">The URL of the video to be shared.</param>
         /// <returns>
-        ///     A Tuple with two values - a boolean indicating whether the request was successful
-        ///     and a string message containing either an error message or a Watch2Gether room URL.
+        /// Tuple: (success/failure, message with room URL or error).
         /// </returns>
         public async Task<Tuple<bool, string?>> CreateRoom(string videoUrl)
         {
-            // Retrieve the urls and the apikey from the configuration
+            // Load configuration and check all endpoints
             _w2GApiKey = configuration["Watch2Gether:ApiKey"] ?? string.Empty;
             _w2GCreateRoomUrl = configuration["Watch2Gether:CreateRoomUrl"] ?? string.Empty;
             _w2GShowRoomUrl = configuration["Watch2Gether:ShowRoomUrl"] ?? string.Empty;
 
-            string? message;
-
-            if (string.IsNullOrEmpty(_w2GApiKey) || string.IsNullOrEmpty(_w2GCreateRoomUrl) ||
-                string.IsNullOrEmpty(_w2GShowRoomUrl))
+            if (string.IsNullOrEmpty(_w2GApiKey) || string.IsNullOrEmpty(_w2GCreateRoomUrl) || string.IsNullOrEmpty(_w2GShowRoomUrl))
             {
-                message = "Could not load necessary configuration, please provide a valid configuration";
-                Program.Log($"{nameof(CreateRoom)}: " + message, LogLevel.Error);
-                return new Tuple<bool, string?>(false, message);
+                string configError = "Could not load necessary configuration, please provide a valid configuration.";
+                Program.Log($"{nameof(CreateRoom)}: {configError}", LogLevel.Error);
+                return Tuple.Create(false, configError);
             }
 
-            List<KeyValuePair<string, string>> headers =
-            [
-                new KeyValuePair<string, string>("Content-Type", "application/json"),
-                new KeyValuePair<string, string>("Accept", "application/json")
-            ];
+            var headers = new List<KeyValuePair<string, string>>
+            {
+                new("Content-Type", "application/json"),
+                new("Accept", "application/json")
+            };
 
             var data = new
             {
@@ -60,26 +62,26 @@ namespace DiscordBot.Services
                 share = videoUrl
             };
 
-            HttpResponse response = await httpService.GetResponseFromUrl(_w2GCreateRoomUrl, Method.Post,
-                $"{nameof(CreateRoom)}: No response from Watch2Gether", headers, data);
+            HttpResponse response = await httpService.GetResponseFromUrl(
+                _w2GCreateRoomUrl,
+                Method.Post,
+                $"{nameof(CreateRoom)}: No response from Watch2Gether",
+                headers,
+                data);
 
-            message = response.Content;
+            string? message = response.Content;
 
-            // If the response content is null, set the error message and return the result Tuple.
             if (response is { IsSuccessStatusCode: true, Content: not null })
             {
                 try
                 {
-                    // Deserialize the response content into a dynamic object and extract the streamkey property.
                     dynamic? responseObj = JsonConvert.DeserializeObject<dynamic>(response.Content);
-                    message = _w2GShowRoomUrl + responseObj?.streamkey;
+                    message = _w2GShowRoomUrl + (string?)responseObj?.streamkey;
                 }
                 catch (Exception e)
                 {
-                    // Log any deserialization exceptions to the console.
                     message = "Failed to deserialize response from Watch2Gether";
-                    Program.Log($"{nameof(CreateRoom)}: " + message + $" Error: {e.Message}",
-                        LogLevel.Error);
+                    Program.Log($"{nameof(CreateRoom)}: {message} Error: {e.Message}", LogLevel.Error);
                 }
             }
 
@@ -89,12 +91,10 @@ namespace DiscordBot.Services
             }
             else
             {
-                Program.Log($"{nameof(CreateRoom)}: Failed to create Watch2Gether room. Error: {message}",
-                    LogLevel.Error);
+                Program.Log($"{nameof(CreateRoom)}: Failed to create Watch2Gether room. Error: {message}", LogLevel.Error);
             }
 
-            // Return the result Tuple with success status and message.
-            return new Tuple<bool, string?>(response.IsSuccessStatusCode, message);
+            return Tuple.Create(response.IsSuccessStatusCode, message);
         }
     }
 }

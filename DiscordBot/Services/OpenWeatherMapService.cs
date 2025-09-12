@@ -4,64 +4,82 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using RestSharp;
+using System;
+using System.Threading.Tasks;
 
 namespace DiscordBot.Services
 {
+    /// <summary>
+    /// Service for accessing current weather data using the OpenWeatherMap API.
+    /// </summary>
     public class OpenWeatherMapService(IHttpService httpService, IConfiguration configuration) : IOpenWeatherMapService
     {
         /// <summary>
-        ///     Api Key to access OpenWeatherMap Api
+        /// The OpenWeatherMap API key from configuration.
         /// </summary>
         private string? _openWeatherMapApiKey;
 
         /// <summary>
-        ///     Url to the OpenWeatherMap Api
+        /// The OpenWeatherMap API base URL from configuration.
         /// </summary>
         private string? _openWeatherMapUrl;
 
-        public async Task<(bool Success, string Message, WeatherData? weatherData)> GetWeatherAsync(string city)
+        /// <summary>
+        /// Retrieves the current weather for a specified city.
+        /// </summary>
+        /// <param name="city">The name of the city to get weather for.</param>
+        /// <returns>
+        /// Tuple: Success flag, message string, and WeatherData object if successful.
+        /// </returns>
+        public async Task<(bool Success, string Message, WeatherData? WeatherData)> GetWeatherAsync(string city)
         {
-            // Retrieve the url and the apikey from the configuration
             _openWeatherMapUrl = configuration["OpenWeatherMap:ApiUrl"] ?? string.Empty;
             _openWeatherMapApiKey = configuration["OpenWeatherMap:ApiKey"] ?? string.Empty;
 
             if (string.IsNullOrEmpty(_openWeatherMapApiKey) || string.IsNullOrEmpty(_openWeatherMapUrl))
             {
-                const string errorMessage =
-                    "No OpenWeatherMap Api Key/Url was provided, please contact the Developer to add a valid Api Key/Url!";
-                Program.Log($"{nameof(GetWeatherAsync)}: " + errorMessage, LogLevel.Error);
-                return (false, errorMessage,
-                    null);
+                const string errorMessage = "No OpenWeatherMap API key or URL configured. Please update your configuration.";
+                Program.Log($"{nameof(GetWeatherAsync)}: {errorMessage}", LogLevel.Error);
+                return (false, errorMessage, null);
             }
 
+            string endpoint = $"{_openWeatherMapUrl}{Uri.EscapeDataString(city)}&units=metric&appid={_openWeatherMapApiKey}";
             HttpResponse response = await httpService.GetResponseFromUrl(
-                $"{_openWeatherMapUrl}{Uri.EscapeDataString(city)}&units=metric&appid={_openWeatherMapApiKey}",
+                endpoint,
                 Method.Post,
-                $"{nameof(GetWeatherAsync)}: Failed to fetch weather data for city '{city}'.");
+                $"{nameof(GetWeatherAsync)}: Failed to fetch weather data for city '{city}'."
+            );
 
             if (!response.IsSuccessStatusCode)
             {
-                return (false, response.Content ?? "", null);
+                return (false, response.Content ?? "API call failed.", null);
             }
 
-            JObject json = JObject.Parse(response.Content ?? "");
-
-            WeatherData weather = new()
+            try
             {
-                City = json["name"]?.Value<string>(),
-                Description = json["weather"]?[0]?["description"]?.Value<string>(),
-                Temperature = json["main"]?["temp"]?.Value<double>(),
-                Humidity = json["main"]?["humidity"]?.Value<int>(),
-                WindSpeed = json["wind"]?["speed"]?.Value<double>()
-            };
+                JObject json = JObject.Parse(response.Content ?? "");
+                var weather = new WeatherData
+                {
+                    City = json["name"]?.Value<string>(),
+                    Description = json["weather"]?[0]?["description"]?.Value<string>(),
+                    Temperature = json["main"]?["temp"]?.Value<double>(),
+                    Humidity = json["main"]?["humidity"]?.Value<int>(),
+                    WindSpeed = json["wind"]?["speed"]?.Value<double>()
+                };
 
-            string message =
-                $"In {weather.City}, the weather currently: {weather.Description}. The temperature is {weather.Temperature:F2}°C. " +
-                $"The humidity is {weather.Humidity}% and the wind speed is {weather.WindSpeed} m/s.";
+                string message =
+                    $"In {weather.City}, the current weather: {weather.Description}. " +
+                    $"Temperature: {weather.Temperature:F2}°C, Humidity: {weather.Humidity}%, Wind speed: {weather.WindSpeed} m/s.";
 
-            Program.Log($"{nameof(GetWeatherAsync)}: Weather data fetched successfully. Response: " + message);
-
-            return (true, message, weather);
+                Program.Log($"{nameof(GetWeatherAsync)}: Weather data fetched successfully. Response: {message}", LogLevel.Information);
+                return (true, message, weather);
+            }
+            catch (Exception ex)
+            {
+                string errorMsg = $"Failed to parse weather data: {ex.Message}";
+                Program.Log($"{nameof(GetWeatherAsync)}: {errorMsg}", LogLevel.Error);
+                return (false, errorMsg, null);
+            }
         }
     }
 }

@@ -1,68 +1,92 @@
 ﻿using DiscordBot.Interfaces;
 using DiscordBot.Wrapper;
+using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
+using System.Threading.Tasks;
 
 namespace DiscordBot
 {
+    /// <summary>
+    /// Defines available Slash Commands for the Discord bot.
+    /// Uses rich responses and Discord best practices for user experience.
+    /// </summary>
     public class SlashCommands(ISlashCommandsService slashCommandsService) : ApplicationCommandModule
     {
-        [SlashCommand("ping",
-            "This is a basic ping command to check if the Bot is online and what the current Latency is")]
+        /// <summary>
+        /// Basic ping: checks if the bot is online and displays current latency.
+        /// </summary>
+        [SlashCommand("ping", "Check if the bot is online and view the latency.")]
         public async Task PingSlashCommand(InteractionContext ctx)
         {
-            InteractionContextWrapper context = new(ctx);
+            var context = new InteractionContextWrapper(ctx);
             await slashCommandsService.PingSlashCommandAsync(context);
         }
 
-        [SlashCommand("ChatGPT",
-            "Send a custom Text to the OpenAI - ChatGPT API and get a response from their AI based on your input")]
-        public async Task ChatSlashCommand(InteractionContext ctx,
-            [Option("prompt", "Write an input that the ChatGPT AI should respond to")]
+        /// <summary>
+        /// Send a prompt to ChatGPT and receive a generated response.
+        /// </summary>
+        [SlashCommand("chatgpt", "Send a prompt to ChatGPT and get an AI-powered reply.")]
+        public async Task ChatSlashCommand(
+            InteractionContext ctx,
+            [Option("prompt", "Your question or prompt for the ChatGPT AI.")]
             string text)
         {
-            InteractionContextWrapper context = new(ctx);
+            var context = new InteractionContextWrapper(ctx);
             await slashCommandsService.ChatSlashCommandAsync(context, text);
         }
 
-        [SlashCommand("DALL-E",
-            "Send a custom Text to the OpenAI - DALL-E Api and get a generated Image based on input")]
-        public async Task ImageSlashCommand(InteractionContext ctx,
-            [Option("prompt", "Write a Text on how the generated Image should look like")]
+        /// <summary>
+        /// Generates an image using OpenAI DALL-E based on the given prompt.
+        /// </summary>
+        [SlashCommand("dall-e", "Generate an image with DALL-E from your description.")]
+        public async Task ImageSlashCommand(
+            InteractionContext ctx,
+            [Option("prompt", "Describe how the generated image should look.")]
             string text)
         {
-            InteractionContextWrapper context = new(ctx);
+            var context = new InteractionContextWrapper(ctx);
             await slashCommandsService.ImageSlashCommandAsync(context, text);
         }
 
-        [SlashCommand("Watch2Gether",
-            "Creates a room for you and your friends in Watch2Gether")]
-        public async Task Watch2GetherSlashCommand(InteractionContext ctx,
-            [Option("Video-URL", "Insert a Video-URL that should auto start after creating a Watch2Gether Room")]
+        /// <summary>
+        /// Creates a shared Watch2Gether room for users.
+        /// </summary>
+        [SlashCommand("watch2gether", "Create a Watch2Gether room for you and your friends.")]
+        public async Task Watch2GetherSlashCommand(
+            InteractionContext ctx,
+            [Option("video-url", "An optional video URL to start playing immediately.")]
             string url = "")
         {
-            InteractionContextWrapper context = new(ctx);
+            var context = new InteractionContextWrapper(ctx);
             await slashCommandsService.Watch2GetherSlashCommandAsync(context, url);
         }
 
-        [SlashCommand("Weather", "Get the current weather for the specified city")]
-        public async Task WeatherSlashCommand(InteractionContext ctx,
-            [Option("city", "The city you want to get the weather for")]
+        /// <summary>
+        /// Fetches and displays the current weather for the specified city.
+        /// </summary>
+        [SlashCommand("weather", "Get the current weather for a specified city.")]
+        public async Task WeatherSlashCommand(
+            InteractionContext ctx,
+            [Option("city", "The city to retrieve weather data for.")]
             string city)
         {
-            InteractionContextWrapper context = new(ctx);
+            var context = new InteractionContextWrapper(ctx);
             await slashCommandsService.WeatherSlashCommandAsync(context, city);
         }
 
-        [SlashCommand("crypto",
-            "Gets the price for a given Cryptocurrency")]
-        public async Task CryptoSlashCommand(InteractionContext ctx,
-            [Option("Symbol", "The Cryptocurrency you want to get the price for")]
+        /// <summary>
+        /// Gets the current price of a specified cryptocurrency.
+        /// </summary>
+        [SlashCommand("crypto", "Get the price for a specific cryptocurrency symbol.")]
+        public async Task CryptoSlashCommand(
+            InteractionContext ctx,
+            [Option("symbol", "The cryptocurrency symbol, e.g. BTC (default: BTC).")]
             string symbol = "BTC",
-            [Option("PhysicalCurrency", "The physical currency to compare against, e.g., USDT")]
-            string physicalCurrency = "USDT")
+            [Option("currency", "The comparison currency, e.g. USDT (default: USDT).")]
+            string currency = "USDT")
         {
-            InteractionContextWrapper context = new(ctx);
-            await slashCommandsService.CryptoSlashCommandAsync(context, symbol, physicalCurrency);
+            var context = new InteractionContextWrapper(ctx);
+            await slashCommandsService.CryptoSlashCommandAsync(context, symbol, currency);
         }
     }
 }

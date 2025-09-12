@@ -3,291 +3,185 @@ using DiscordBot.Services;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using RestSharp;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace DiscordBotTests.ServiceTests;
-
-[TestFixture]
-public class OpenAiServiceTests
+namespace DiscordBotTests.ServiceTests
 {
-	[SetUp]
-	public void Setup()
-	{
-		_mockHttpService = new Mock<IHttpService>();
+    [TestFixture]
+    public class OpenAiServiceTests
+    {
+        private Mock<IHttpService> _mockHttpService = null!;
+        private OpenAiService _openAiService = null!;
+        private IConfiguration _configuration = null!;
 
-		// Create an in-memory configuration for testing purposes
-		var configurationBuilder = new ConfigurationBuilder();
-		configurationBuilder.AddInMemoryCollection(new[]
-		{
-			new KeyValuePair<string, string?>("OpenAi:ApiKey", "testKey"),
-			new KeyValuePair<string, string?>("OpenAi:ChatGPTApiUrl",
-				"https://api.openai.com/v1/engines/davinci-codex/completions"),
-			new KeyValuePair<string, string?>("OpenAi:DallEApiUrl", "https://api.openai.com/v1/images/generations")
-		});
-		var configuration = configurationBuilder.Build();
+        [SetUp]
+        public void Setup()
+        {
+            _mockHttpService = new Mock<IHttpService>();
+            _configuration = CreateTestConfiguration();
+            _openAiService = new OpenAiService(_mockHttpService.Object, _configuration);
+        }
 
-		AiService = new OpenAiService(_mockHttpService.Object, configuration);
-	}
+        private static IConfiguration CreateTestConfiguration()
+        {
+            var configurationBuilder = new ConfigurationBuilder();
+            configurationBuilder.AddInMemoryCollection(new[]
+            {
+                new KeyValuePair<string, string?>("OpenAi:ApiKey", "test-api-key"),
+                new KeyValuePair<string, string?>("OpenAi:ChatGPTApiUrl", "https://api.openai.com/v1/chat/completions"),
+                new KeyValuePair<string, string?>("OpenAi:DallEApiUrl", "https://api.openai.com/v1/images/generations")
+            });
+            return configurationBuilder.Build();
+        }
 
-	private Mock<IHttpService> _mockHttpService = null!;
-	public OpenAiService? AiService { get; private set; }
+        [Test]
+        public async Task ChatGptAsync_WithValidResponse_ReturnsSuccess()
+        {
+            // Arrange
+            const string message = "Hello, how are you?";
+            const string responseText = "I'm doing well, thank you!";
+            const string jsonResponse = "{\"choices\": [{\"message\": {\"content\": \"" + responseText + "\"}}]}";
 
-	[Test]
-	public async Task ChatGpt_WithValidApiKeyAndMessage_ReturnsSuccessAndResponse()
-	{
-		// Arrange
-		const string message = "Hello, how are you?";
-		const string responseText = "I'm doing well, thank you!";
-		const string? jsonResponse = "{\"choices\": [{\"message\": {\"content\": \"" + responseText + "\"}}]}";
+            _mockHttpService.Setup(x => x.GetResponseFromUrl(It.IsAny<string>(), It.IsAny<Method>(), It.IsAny<string?>(),
+                It.IsAny<List<KeyValuePair<string, string>>?>(), It.IsAny<object?>()))
+                .ReturnsAsync(new HttpResponse(true, jsonResponse));
 
-		var configurationBuilder = new ConfigurationBuilder();
-		configurationBuilder.AddInMemoryCollection(new[]
-		{
-			new KeyValuePair<string, string?>("OpenAi:ApiKey", "testKey"),
-			new KeyValuePair<string, string?>("OpenAi:ChatGPTApiUrl",
-				"https://api.openai.com/v1/engines/davinci-codex/completions"),
-			new KeyValuePair<string, string?>("OpenAi:DallEApiUrl", "https://api.openai.com/v1/images/generations")
-		});
-		var configuration = configurationBuilder.Build();
+            // Act
+            var result = await _openAiService.ChatGptAsync(message);
 
-		var service = new OpenAiService(_mockHttpService?.Object ?? throw new InvalidOperationException(),
-			configuration);
+            // Assert
+            Assert.That(result.Item1, Is.True);
+            Assert.That(result.Item2, Is.EqualTo(responseText));
+        }
 
-		_mockHttpService.Setup(x => x.GetResponseFromUrl(It.IsAny<string>(), It.IsAny<Method>(), It.IsAny<string>(),
-				It.IsAny<List<KeyValuePair<string, string>>>(), It.IsAny<object>()))
-			.ReturnsAsync(new HttpResponse(true, jsonResponse));
+        [Test]
+        public async Task ChatGptAsync_WithMissingConfiguration_ReturnsError()
+        {
+            // Arrange
+            const string message = "Hello, how are you?";
+            var emptyConfig = new ConfigurationBuilder().Build();
+            var service = new OpenAiService(_mockHttpService.Object, emptyConfig);
 
-		// Act
-		var result = await service.ChatGptAsync(message);
+            // Act
+            var result = await service.ChatGptAsync(message);
 
-		// Assert
-		Assert.That(result.Item1, Is.True);
-		Assert.That(result.Item2, Is.EqualTo(responseText));
-	}
+            // Assert
+            Assert.That(result.Item1, Is.False);
+            Assert.That(result.Item2, Does.Contain("No OpenAI API key or ChatGPT API URL provided"));
+        }
 
-	[Test]
-	public async Task ChatGpt_WithInvalidApiKey_ReturnsError()
-	{
-		// Arrange
-		const string message = "Hello, how are you?";
-		const string expectedError =
-			"No OpenAI Api Key/Url was provided, please contact the Developer to add a valid Api Key/Url!";
+        [Test]
+        public async Task ChatGptAsync_WithEmptyResponse_ReturnsError()
+        {
+            // Arrange
+            const string message = "Hello, how are you?";
+            const string jsonResponse = "{\"choices\": [{\"message\": {\"content\": \"\"}}]}";
 
-		var configurationBuilder = new ConfigurationBuilder();
-		configurationBuilder.AddInMemoryCollection(new[]
-		{
-			new KeyValuePair<string, string?>("OpenAi:ApiKey", ""),
-			new KeyValuePair<string, string?>("OpenAi:ChatGPTApiUrl",
-				"https://api.openai.com/v1/engines/davinci-codex/completions"),
-			new KeyValuePair<string, string?>("OpenAi:DallEApiUrl", "https://api.openai.com/v1/images/generations")
-		});
-		var configuration = configurationBuilder.Build();
+            _mockHttpService.Setup(x => x.GetResponseFromUrl(It.IsAny<string>(), It.IsAny<Method>(), It.IsAny<string?>(),
+                It.IsAny<List<KeyValuePair<string, string>>?>(), It.IsAny<object?>()))
+                .ReturnsAsync(new HttpResponse(true, jsonResponse));
 
-		var service = new OpenAiService(_mockHttpService.Object ?? throw new InvalidOperationException(),
-			configuration);
+            // Act
+            var result = await _openAiService.ChatGptAsync(message);
 
-		_mockHttpService.Setup(x => x.GetResponseFromUrl(It.IsAny<string>(), It.IsAny<Method>(), It.IsAny<string>(),
-				It.IsAny<List<KeyValuePair<string, string>>>(), It.IsAny<object>()))
-			.ReturnsAsync(new HttpResponse(false, string.Empty));
+            // Assert
+            Assert.That(result.Item1, Is.False);
+            Assert.That(result.Item2, Is.EqualTo("Could not deserialize response from ChatGPT API!"));
+        }
 
-		// Act
-		var result = await service.ChatGptAsync(message);
+        [Test]
+        public async Task ChatGptAsync_WithApiError_ReturnsError()
+        {
+            // Arrange
+            const string message = "Hello, how are you?";
+            const string expectedError = "API rate limit exceeded";
 
-		// Assert
-		Assert.That(result.Item1, Is.False);
-		Assert.That(result.Item2, Is.EqualTo(expectedError));
-	}
+            _mockHttpService.Setup(x => x.GetResponseFromUrl(It.IsAny<string>(), It.IsAny<Method>(), It.IsAny<string?>(),
+                It.IsAny<List<KeyValuePair<string, string>>?>(), It.IsAny<object?>()))
+                .ReturnsAsync(new HttpResponse(false, expectedError));
 
-	[Test]
-	public async Task ChatGpt_WithDeserializationError_ReturnsError()
-	{
-		// Arrange
-		const string message = "Hello, how are you?";
-		const string? jsonResponse = "{\"choices\": [{\"message\": {\"content\": \"\"}}]}";
+            // Act
+            var result = await _openAiService.ChatGptAsync(message);
 
-		var configurationBuilder = new ConfigurationBuilder();
-		configurationBuilder.AddInMemoryCollection(new[]
-		{
-			new KeyValuePair<string, string?>("OpenAi:ApiKey", "testKey"),
-			new KeyValuePair<string, string?>("OpenAi:ChatGPTApiUrl",
-				"https://api.openai.com/v1/engines/davinci-codex/completions"),
-			new KeyValuePair<string, string?>("OpenAi:DallEApiUrl", "https://api.openai.com/v1/images/generations")
-		});
-		var configuration = configurationBuilder.Build();
+            // Assert
+            Assert.That(result.Item1, Is.False);
+            Assert.That(result.Item2, Is.EqualTo(expectedError));
+        }
 
-		var service = new OpenAiService(_mockHttpService.Object ?? throw new InvalidOperationException(),
-			configuration);
+        [Test]
+        public async Task DallEAsync_WithValidResponse_ReturnsSuccess()
+        {
+            // Arrange
+            const string message = "A beautiful landscape";
+            const string imageUrl = "https://example.com/generated-image.png";
+            const string jsonResponse = "{\"data\": [{\"url\": \"" + imageUrl + "\"}]}";
 
-		_mockHttpService.Setup(x => x.GetResponseFromUrl(It.IsAny<string>(), It.IsAny<Method>(), It.IsAny<string>(),
-				It.IsAny<List<KeyValuePair<string, string>>>(), It.IsAny<object>()))
-			.ReturnsAsync(new HttpResponse(true, jsonResponse));
+            _mockHttpService.Setup(x => x.GetResponseFromUrl(It.IsAny<string>(), It.IsAny<Method>(), It.IsAny<string?>(),
+                It.IsAny<List<KeyValuePair<string, string>>?>(), It.IsAny<object?>()))
+                .ReturnsAsync(new HttpResponse(true, jsonResponse));
 
-		// Act
-		var result = await service.ChatGptAsync(message);
+            // Act
+            var result = await _openAiService.DallEAsync(message);
 
-		// Assert
-		Assert.That(result.Item1, Is.False);
-		Assert.That(result.Item2, Is.EqualTo("Could not deserialize response from ChatGPT API!"));
-	}
+            // Assert
+            Assert.That(result.Item1, Is.True);
+            Assert.That(result.Item2, Is.EqualTo($"Here is your generated image: {imageUrl}"));
+        }
 
-	[Test]
-	public async Task ChatGpt_WithUnknownError_ReturnsError()
-	{
-		// Arrange
-		const string message = "Hello, how are you?";
-		const string? expectedError = "Unknown error occurred (StatusCode: InternalServerError)";
+        [Test]
+        public async Task DallEAsync_WithMissingConfiguration_ReturnsError()
+        {
+            // Arrange
+            const string message = "A beautiful landscape";
+            var emptyConfig = new ConfigurationBuilder().Build();
+            var service = new OpenAiService(_mockHttpService.Object, emptyConfig);
 
-		var configurationBuilder = new ConfigurationBuilder();
-		configurationBuilder.AddInMemoryCollection(new[]
-		{
-			new KeyValuePair<string, string?>("OpenAi:ApiKey", "testKey"),
-			new KeyValuePair<string, string?>("OpenAi:ChatGPTApiUrl",
-				"https://api.openai.com/v1/engines/davinci-codex/completions"),
-			new KeyValuePair<string, string?>("OpenAi:DallEApiUrl", "https://api.openai.com/v1/images/generations")
-		});
-		var configuration = configurationBuilder.Build();
+            // Act
+            var result = await service.DallEAsync(message);
 
-		var service = new OpenAiService(_mockHttpService?.Object ?? throw new InvalidOperationException(),
-			configuration);
+            // Assert
+            Assert.That(result.Item1, Is.False);
+            Assert.That(result.Item2, Does.Contain("No OpenAI API key or DALL-E API URL provided"));
+        }
 
-		_mockHttpService.Setup(x => x.GetResponseFromUrl(It.IsAny<string>(), It.IsAny<Method>(), It.IsAny<string>(),
-				It.IsAny<List<KeyValuePair<string, string>>>(), It.IsAny<object>()))
-			.ReturnsAsync(new HttpResponse(false, expectedError));
+        [Test]
+        public async Task DallEAsync_WithDeserializationError_ReturnsError()
+        {
+            // Arrange
+            const string message = "A beautiful landscape";
+            const string jsonResponse = "{\"data\": [{}]}";
 
-		// Act
-		var result = await service.ChatGptAsync(message);
+            _mockHttpService.Setup(x => x.GetResponseFromUrl(It.IsAny<string>(), It.IsAny<Method>(), It.IsAny<string?>(),
+                It.IsAny<List<KeyValuePair<string, string>>?>(), It.IsAny<object?>()))
+                .ReturnsAsync(new HttpResponse(true, jsonResponse));
 
-		// Assert
-		Assert.That(result.Item1, Is.False);
-		Assert.That(result.Item2, Is.EqualTo(expectedError));
-	}
+            // Act
+            var result = await _openAiService.DallEAsync(message);
 
-	[Test]
-	public async Task DallE_WithDeserializationError_ReturnsError()
-	{
-		// Arrange
-		const string message = "A beautiful landscape";
-		const string? jsonResponse = "{\"data\": [{}]}";
+            // Assert
+            Assert.That(result.Item1, Is.False);
+            Assert.That(result.Item2, Is.EqualTo("Could not deserialize image URL from DALL-E API!"));
+        }
 
-		var configurationBuilder = new ConfigurationBuilder();
-		configurationBuilder.AddInMemoryCollection(new[]
-		{
-			new KeyValuePair<string, string?>("OpenAi:ApiKey", "testKey"),
-			new KeyValuePair<string, string?>("OpenAi:ChatGPTApiUrl",
-				"https://api.openai.com/v1/engines/davinci-codex/completions"),
-			new KeyValuePair<string, string?>("OpenAi:DallEApiUrl", "https://api.openai.com/v1/images/generations")
-		});
-		var configuration = configurationBuilder.Build();
+        [Test]
+        public async Task DallEAsync_WithApiError_ReturnsError()
+        {
+            // Arrange
+            const string message = "A beautiful landscape";
+            const string expectedError = "Content policy violation";
 
-		var service = new OpenAiService(_mockHttpService.Object ?? throw new InvalidOperationException(),
-			configuration);
+            _mockHttpService.Setup(x => x.GetResponseFromUrl(It.IsAny<string>(), It.IsAny<Method>(), It.IsAny<string?>(),
+                It.IsAny<List<KeyValuePair<string, string>>?>(), It.IsAny<object?>()))
+                .ReturnsAsync(new HttpResponse(false, expectedError));
 
-		_mockHttpService.Setup(x => x.GetResponseFromUrl(It.IsAny<string>(), It.IsAny<Method>(), It.IsAny<string>(),
-				It.IsAny<List<KeyValuePair<string, string>>>(), It.IsAny<object>()))
-			.ReturnsAsync(new HttpResponse(true, jsonResponse));
+            // Act
+            var result = await _openAiService.DallEAsync(message);
 
-		// Act
-		var result = await service.DallEAsync(message);
-
-		// Assert
-		Assert.That(result.Item1, Is.False);
-		Assert.That(result.Item2, Is.EqualTo("Could not deserialize response from Dall-E API!"));
-	}
-
-	[Test]
-	public async Task DallE_WithUnknownError_ReturnsError()
-	{
-		// Arrange
-		const string message = "A beautiful landscape";
-		const string? expectedError = "Unknown error occurred";
-
-		var configurationBuilder = new ConfigurationBuilder();
-		configurationBuilder.AddInMemoryCollection(new[]
-		{
-			new KeyValuePair<string, string?>("OpenAi:ApiKey", "testKey"),
-			new KeyValuePair<string, string?>("OpenAi:ChatGPTApiUrl",
-				"https://api.openai.com/v1/engines/davinci-codex/completions"),
-			new KeyValuePair<string, string?>("OpenAi:DallEApiUrl", "https://api.openai.com/v1/images/generations")
-		});
-		var configuration = configurationBuilder.Build();
-
-		var service = new OpenAiService(_mockHttpService.Object ?? throw new InvalidOperationException(),
-			configuration);
-
-		_mockHttpService.Setup(x => x.GetResponseFromUrl(It.IsAny<string>(), It.IsAny<Method>(), It.IsAny<string>(),
-				It.IsAny<List<KeyValuePair<string, string>>>(), It.IsAny<object>()))
-			.ReturnsAsync(new HttpResponse(false, expectedError));
-
-		// Act
-		var result = await service.DallEAsync(message);
-
-		// Assert
-		Assert.That(result.Item1, Is.False);
-		Assert.That(result.Item2, Is.EqualTo(expectedError));
-	}
-
-	[Test]
-	public async Task DallE_WithValidApiKeyAndMessage_ReturnsSuccessAndResponse()
-	{
-		// Arrange
-		const string message = "A beautiful landscape";
-		const string imageUrl = "https://example.com/generated-image.png";
-		const string? jsonResponse = "{\"data\": [{\"url\": \"" + imageUrl + "\"}]}";
-
-		var configurationBuilder = new ConfigurationBuilder();
-		configurationBuilder.AddInMemoryCollection(new[]
-		{
-			new KeyValuePair<string, string?>("OpenAi:ApiKey", "testKey"),
-			new KeyValuePair<string, string?>("OpenAi:ChatGPTApiUrl",
-				"https://api.openai.com/v1/engines/davinci-codex/completions"),
-			new KeyValuePair<string, string?>("OpenAi:DallEApiUrl", "https://api.openai.com/v1/images/generations")
-		});
-		var configuration = configurationBuilder.Build();
-
-		var service = new OpenAiService(_mockHttpService.Object ?? throw new InvalidOperationException(),
-			configuration);
-
-		_mockHttpService.Setup(x => x.GetResponseFromUrl(It.IsAny<string>(), It.IsAny<Method>(), It.IsAny<string>(),
-				It.IsAny<List<KeyValuePair<string, string>>>(), It.IsAny<object>()))
-			.ReturnsAsync(new HttpResponse(true, jsonResponse));
-
-		// Act
-		var result = await service.DallEAsync(message);
-
-		// Assert
-		Assert.That(result.Item1, Is.True);
-		Assert.That(result.Item2, Is.EqualTo($"Here is your generated image: {imageUrl}"));
-	}
-
-	[Test]
-	public async Task DallE_WithInvalidApiKey_ReturnsError()
-	{
-		// Arrange
-		const string message = "A beautiful landscape";
-		const string expectedError =
-			"No OpenAI Api Key/Url was provided, please contact the Developer to add a valid Api Key/Url!";
-
-		var configurationBuilder = new ConfigurationBuilder();
-		configurationBuilder.AddInMemoryCollection(new[]
-		{
-			new KeyValuePair<string, string?>("OpenAi:ApiKey", ""),
-			new KeyValuePair<string, string?>("OpenAi:ChatGPTApiUrl",
-				"https://api.openai.com/v1/engines/davinci-codex/completions"),
-			new KeyValuePair<string, string?>("OpenAi:DallEApiUrl", "https://api.openai.com/v1/images/generations")
-		});
-		var configuration = configurationBuilder.Build();
-
-		var service = new OpenAiService(_mockHttpService.Object ?? throw new InvalidOperationException(),
-			configuration);
-
-		_mockHttpService.Setup(x => x.GetResponseFromUrl(It.IsAny<string>(), It.IsAny<Method>(), It.IsAny<string>(),
-				It.IsAny<List<KeyValuePair<string, string>>>(), It.IsAny<object>()))
-			.ReturnsAsync(new HttpResponse(false, string.Empty));
-
-		// Act
-		var result = await service.DallEAsync(message);
-
-		// Assert
-		Assert.That(result.Item1, Is.False);
-		Assert.That(result.Item2, Is.EqualTo(expectedError));
-	}
+            // Assert
+            Assert.That(result.Item1, Is.False);
+            Assert.That(result.Item2, Is.EqualTo(expectedError));
+        }
+    }
 }

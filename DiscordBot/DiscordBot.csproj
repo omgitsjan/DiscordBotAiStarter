@@ -29,6 +29,7 @@
 		<PackageReference Include="DSharpPlus.Interactivity" Version="4.5.1" />
 		<PackageReference Include="DSharpPlus.SlashCommands" Version="4.5.1" />
 		<PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
@@ -37,6 +38,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Update="appsettings.example.json">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="appsettings.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>

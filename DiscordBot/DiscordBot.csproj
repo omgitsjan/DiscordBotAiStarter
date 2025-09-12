@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<PackageId>DiscordBotAI</PackageId>
@@ -8,7 +8,7 @@
 		<Authors>omgitsjan</Authors>
 		<RepositoryUrl>https://github.com/omgitsjan/DiscordBotAI</RepositoryUrl>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net9.0</TargetFramework>
 		<RootNamespace>DiscordBot</RootNamespace>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
@@ -28,12 +28,12 @@
 		<PackageReference Include="DSharpPlus" Version="4.5.1" />
 		<PackageReference Include="DSharpPlus.Interactivity" Version="4.5.1" />
 		<PackageReference Include="DSharpPlus.SlashCommands" Version="4.5.1" />
-		<PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
-		<PackageReference Include="NLog.Extensions.Logging" Version="6.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.8" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.8" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
+		<PackageReference Include="NLog.Extensions.Logging" Version="6.0.3" />
 		<PackageReference Include="RestSharp" Version="112.1.0" />
 	</ItemGroup>
 

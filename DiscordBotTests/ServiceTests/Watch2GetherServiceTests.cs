@@ -38,7 +38,7 @@ namespace DiscordBotTests.ServiceTests
             const string videoUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
             const string streamKey = "AbCdEfGhIjKlMnOpQrStUvWxYz";
             var jsonResponse = JsonConvert.SerializeObject(new { streamkey = streamKey });
-            static readonly string expectedRoomUrl = $"https://w2g.tv/rooms/{streamKey}";
+            const string expectedRoomUrl = $"https://w2g.tv/rooms/{streamKey}";
 
             _mockHttpService.Setup(x => x.GetResponseFromUrl(
                 It.IsAny<string>(),

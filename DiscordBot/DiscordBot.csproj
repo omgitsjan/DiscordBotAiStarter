@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<PackageId>DiscordBotAI</PackageId>
@@ -29,6 +29,7 @@
 		<PackageReference Include="DSharpPlus.Interactivity" Version="4.5.1" />
 		<PackageReference Include="DSharpPlus.SlashCommands" Version="4.5.1" />
 		<PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.8" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.8" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
@@ -37,6 +38,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Update="appsettings.example.json">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="appsettings.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>

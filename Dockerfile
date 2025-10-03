@@ -21,7 +21,7 @@ WORKDIR /src/DiscordBot
 RUN dotnet publish -c Release -o /app
 
 # Stage 2: Setup runtime
-FROM mcr.microsoft.com/dotnet/aspnet:9.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app .
 ENTRYPOINT ["dotnet", "DiscordBot.dll"]

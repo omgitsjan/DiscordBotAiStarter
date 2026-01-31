@@ -33,7 +33,7 @@
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.8" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
-		<PackageReference Include="NLog.Extensions.Logging" Version="6.0.3" />
+		<PackageReference Include="NLog.Extensions.Logging" Version="6.1.1" />
 		<PackageReference Include="RestSharp" Version="112.1.0" />
 	</ItemGroup>
 

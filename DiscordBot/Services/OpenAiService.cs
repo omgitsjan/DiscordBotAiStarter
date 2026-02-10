@@ -103,7 +103,7 @@ namespace DiscordBot.Services
 
             var data = new
             {
-                model = "dall-e-3",
+                model = "gpt-image-1",
                 prompt = message,
                 n = 1,
                 size = "1024x1024"

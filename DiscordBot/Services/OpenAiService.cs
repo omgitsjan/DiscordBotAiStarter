@@ -13,22 +13,20 @@ namespace DiscordBot.Services
     /// Service for interacting with OpenAI APIs like ChatGPT and DALL-E.
     /// Handles API requests, response parsing, and error management.
     /// </summary>
-    public class OpenAiService(IHttpService httpService, IConfiguration configuration) : IOpenAiService
+    public class OpenAiService : IOpenAiService
     {
-        /// <summary>
-        /// Base URL for the ChatGPT API.
-        /// </summary>
-        private string? _chatGptApiUrl;
+        private readonly IHttpService _httpService;
+        private readonly string _chatGptApiUrl;
+        private readonly string _dallEApiUrl;
+        private readonly string _openAiApiKey;
 
-        /// <summary>
-        /// Base URL for the DALL-E API.
-        /// </summary>
-        private string? _dallEApiUrl;
-
-        /// <summary>
-        /// API key to authenticate with OpenAI services.
-        /// </summary>
-        private string? _openAiApiKey;
+        public OpenAiService(IHttpService httpService, IConfiguration configuration)
+        {
+            _httpService = httpService;
+            _openAiApiKey = configuration["OpenAi:ApiKey"] ?? string.Empty;
+            _chatGptApiUrl = configuration["OpenAi:ChatGPTApiUrl"] ?? "https://api.openai.com/v1/chat/completions";
+            _dallEApiUrl = configuration["OpenAi:DallEApiUrl"] ?? "https://api.openai.com/v1/images/generations";
+        }
 
         /// <summary>
         /// Sends a prompt to the ChatGPT API and returns the generated response.
@@ -38,9 +36,6 @@ namespace DiscordBot.Services
         public async Task<Tuple<bool, string>> ChatGptAsync(string message)
         {
             bool success = false;
-
-            _openAiApiKey = configuration["OpenAi:ApiKey"] ?? string.Empty;
-            _chatGptApiUrl = configuration["OpenAi:ChatGPTApiUrl"] ?? string.Empty;
 
             if (string.IsNullOrEmpty(_openAiApiKey) || string.IsNullOrEmpty(_chatGptApiUrl))
             {
@@ -57,11 +52,11 @@ namespace DiscordBot.Services
 
             var data = new
             {
-                model = "gpt-3.5-turbo", // CHANGE IF YOU WANT A OTHER MODEL
+                model = "gpt-4o",
                 messages = new[] { new { role = "user", content = message } }
             };
 
-            HttpResponse response = await httpService.GetResponseFromUrl(
+            HttpResponse response = await _httpService.GetResponseFromUrl(
                 _chatGptApiUrl, Method.Post, "Unknown error occurred in ChatGptAsync", headers, data);
 
             if (response is { IsSuccessStatusCode: true, Content: not null })
@@ -93,9 +88,6 @@ namespace DiscordBot.Services
         {
             bool success = false;
 
-            _openAiApiKey = configuration["OpenAi:ApiKey"] ?? string.Empty;
-            _dallEApiUrl = configuration["OpenAi:DallEApiUrl"] ?? string.Empty;
-
             if (string.IsNullOrEmpty(_openAiApiKey) || string.IsNullOrEmpty(_dallEApiUrl))
             {
                 const string errorMessage = "No OpenAI API key or DALL-E API URL provided. Please update configuration.";
@@ -111,12 +103,13 @@ namespace DiscordBot.Services
 
             var data = new
             {
+                model = "dall-e-3",
                 prompt = message,
                 n = 1,
                 size = "1024x1024"
             };
 
-            HttpResponse response = await httpService.GetResponseFromUrl(
+            HttpResponse response = await _httpService.GetResponseFromUrl(
                 _dallEApiUrl, Method.Post, "Received a failed response from the Dall-E API.", headers, data);
 
             if (response is { IsSuccessStatusCode: true, Content: not null })

@@ -21,7 +21,7 @@ Copy code
 
 Next, you need to specify the environment variables for the Discord bot token and ChatGPT API key when starting the bot. For example:
 
-Dont forget to change the variables in appsettings.json.
+Dont forget to change the variables in appsettings.json. You can also optionally specify `ChatModel` (default: gpt-4o) and `ImageModel` (default: gpt-image-1).
 
 Replace `DiscordToken`, `ChatGptApiKey`, `W2GApiKey` and `OpenWeatherMapApiKey` with your actual tokens and API keys, respectively.
 
@@ -33,13 +33,14 @@ _ChatGPT:_
 
 `/chatgpt What is the meaning of life?`
 
-_DALL-E:_
+_Image Generation:_
 
 `/dall-e Pixel art where monkeys trying to rob a bank`
 
-The bot will respond with a generated image/text response based on the prompt you provided.
+The bot will respond with a generated image/text response based on the prompt you provided. 
 
-**Additional**
+By default, the bot uses **gpt-4o** for chat and **gpt-image-1** for images, but these are fully configurable in your `appsettings.json` or via environment variables (`ChatModel` and `ImageModel`).
+
 
 _Watch2Gether:_
 

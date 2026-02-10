@@ -19,6 +19,8 @@ namespace DiscordBot.Services
         private readonly string _chatGptApiUrl;
         private readonly string _dallEApiUrl;
         private readonly string _openAiApiKey;
+        private readonly string _chatModel;
+        private readonly string _imageModel;
 
         public OpenAiService(IHttpService httpService, IConfiguration configuration)
         {
@@ -26,6 +28,10 @@ namespace DiscordBot.Services
             _openAiApiKey = configuration["OpenAi:ApiKey"] ?? string.Empty;
             _chatGptApiUrl = configuration["OpenAi:ChatGPTApiUrl"] ?? "https://api.openai.com/v1/chat/completions";
             _dallEApiUrl = configuration["OpenAi:DallEApiUrl"] ?? "https://api.openai.com/v1/images/generations";
+            
+            // Allow models to be configured via environment/config with specific fallbacks
+            _chatModel = configuration["OpenAi:ChatModel"] ?? "gpt-4o";
+            _imageModel = configuration["OpenAi:ImageModel"] ?? "gpt-image-1";
         }
 
         /// <summary>
@@ -52,7 +58,7 @@ namespace DiscordBot.Services
 
             var data = new
             {
-                model = "gpt-4o",
+                model = _chatModel,
                 messages = new[] { new { role = "user", content = message } }
             };
 
@@ -103,7 +109,7 @@ namespace DiscordBot.Services
 
             var data = new
             {
-                model = "gpt-image-1",
+                model = _imageModel,
                 prompt = message,
                 n = 1,
                 size = "1024x1024"
